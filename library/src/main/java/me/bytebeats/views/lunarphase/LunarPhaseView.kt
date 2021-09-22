@@ -3,9 +3,13 @@ package me.bytebeats.views.lunarphase
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.*
+import android.os.Handler
+import android.os.Looper
+import android.os.Message
 import android.util.AttributeSet
 import android.view.View
 import androidx.core.content.ContextCompat
+import java.lang.ref.WeakReference
 
 /**
  * Created by bytebeats on 2021/9/22 : 12:04
@@ -18,20 +22,68 @@ class LunarPhaseView @JvmOverloads constructor(
     defStyleRes: Int = 0
 ) : View(context, attributeSet, defStyleRes) {
 
+    private val mHandler by lazy { UIHandler(WeakReference(this)) }
+
     var rotate: Int = 0
         set(value) {
             field = value
             invalidate()
         }
 
-    var phase: Int = 0
+    var originalPhase = 0
         set(value) {
             field = value
             invalidate()
         }
+    private var phase: Int = 0
 
+    var duration: Int = DEFAULT_DURATION_IN_MILLIS
+    var interval: Int = DEFAULT_INTERVAL_IN_MILLIS
+    private var passTime = 0L
+
+    private var isStarted = false
 
     private val mPaint by lazy { Paint() }
+
+    init {
+        val a =
+            context.obtainStyledAttributes(attributeSet, R.styleable.LunarPhaseView, defStyleRes, 0)
+        rotate = a.getInteger(R.styleable.LunarPhaseView_rotate, 0)
+        originalPhase = a.getInteger(R.styleable.LunarPhaseView_phase, 0)
+        duration = a.getInteger(
+            R.styleable.LunarPhaseView_durationInMillis,
+            DEFAULT_DURATION_IN_MILLIS
+        )
+        interval = a.getInteger(
+            R.styleable.LunarPhaseView_intervalInMillis,
+            DEFAULT_INTERVAL_IN_MILLIS
+        )
+
+        a.recycle()
+    }
+
+    fun start() {
+        reset()
+        isStarted = true
+        resume()
+    }
+
+    fun resume() {
+        if (!isStarted) {
+            return
+        }
+        mHandler.sendEmptyMessage(UPDATE_PHASE)
+    }
+
+    fun pause() {
+        mHandler.removeMessages(UPDATE_PHASE)
+    }
+
+    fun reset() {
+        pause()
+        passTime = 0
+        isStarted = false
+    }
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
@@ -110,5 +162,33 @@ class LunarPhaseView @JvmOverloads constructor(
         mPaint.xfermode = null
         canvas.restoreToCount(layer)
         canvas.rotate(rotate.toFloat())
+    }
+
+    private class UIHandler(private val reference: WeakReference<LunarPhaseView>) :
+        Handler(Looper.getMainLooper()) {
+        override fun handleMessage(msg: Message) {
+            when (msg.what) {
+                UPDATE_PHASE -> {
+                    reference.get()?.apply {
+                        phase =
+                            originalPhase - (originalPhase * passTime / duration).toInt()
+                        invalidate()
+                        if (passTime in 1 until duration) {
+                            passTime += interval
+                            mHandler.sendEmptyMessage(UPDATE_PHASE)
+                        }
+                    }
+                }
+                else -> {
+                    super.handleMessage(msg)
+                }
+            }
+        }
+    }
+
+    companion object {
+        private const val UPDATE_PHASE = 0x10001
+        private const val DEFAULT_DURATION_IN_MILLIS = 30000
+        private const val DEFAULT_INTERVAL_IN_MILLIS = 100
     }
 }
