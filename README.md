@@ -57,7 +57,9 @@ In Java/Kotlin file,
 ## Implementation
 
 Night sky is dark. So `background` is drawn with color of black.
+
 Moon is round. So draw a `circle` to present Moon.
+
 Then the Moon ellipse is implemented with an `oval`.
 
 ![Ellipse](media/ellipse.png)
