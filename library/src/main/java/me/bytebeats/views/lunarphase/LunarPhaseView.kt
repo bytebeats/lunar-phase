@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Message
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import androidx.core.content.ContextCompat
 import java.lang.ref.WeakReference
@@ -95,9 +96,9 @@ class LunarPhaseView @JvmOverloads constructor(
         val rectF = RectF(0F, 0F, width.toFloat(), height.toFloat())
         val color =
             if (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) {
-                ContextCompat.getColor(context, android.R.color.holo_orange_dark)
-            } else {
                 ContextCompat.getColor(context, android.R.color.holo_orange_light)
+            } else {
+                ContextCompat.getColor(context, android.R.color.holo_orange_dark)
             }
         mPaint.color = color
         val radius = width.coerceAtMost(height) * 0.4F
@@ -172,8 +173,9 @@ class LunarPhaseView @JvmOverloads constructor(
                     reference.get()?.apply {
                         phase =
                             originalPhase - (originalPhase * passTime / duration).toInt()
+                        Log.i(TAG, "phase: $phase")
                         invalidate()
-                        if (passTime in 1 until duration) {
+                        if (passTime in 0 until duration) {
                             passTime += interval
                             mHandler.sendEmptyMessage(UPDATE_PHASE)
                         }
@@ -187,6 +189,7 @@ class LunarPhaseView @JvmOverloads constructor(
     }
 
     companion object {
+        private const val TAG = "LunarPhaseView"
         private const val UPDATE_PHASE = 0x10001
         private const val DEFAULT_DURATION_IN_MILLIS = 30000
         private const val DEFAULT_INTERVAL_IN_MILLIS = 100
